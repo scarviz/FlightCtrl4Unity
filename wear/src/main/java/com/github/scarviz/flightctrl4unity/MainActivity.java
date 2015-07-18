@@ -1,6 +1,10 @@
 package com.github.scarviz.flightctrl4unity;
 
+import android.content.ComponentName;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.wearable.activity.WearableActivity;
 import android.support.wearable.view.BoxInsetLayout;
 import android.util.Log;
@@ -24,13 +28,24 @@ public class MainActivity extends WearableActivity {
      * タッチ動作を示す値
      */
     public static final String ACTION_DOWN = "ACTION_DOWN";
+    public static final String ROLL = "ROLL";
+    public static final String PITCH = "PITCH";
 
     private static final String PATH_TOUCH = "/touch";
+    private static final String PATH_ROLL = "/roll";
+    private static final String PATH_PITCH = "/pitch";
 
     private GoogleApiClient mGoogleApiClient;
 
     private BoxInsetLayout mContainerView;
     private TextView mTextView;
+
+    String mAzimuth;
+    String mPitch;
+    String mRoll;
+
+    private SensorService mBoundService;
+    private boolean mIsBound;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +61,12 @@ public class MainActivity extends WearableActivity {
                 .addConnectionCallbacks(mConnectionCallbacks)
                 .addOnConnectionFailedListener(mOnConnectionFailedListener)
                 .build();
+
+        mAzimuth = getString(R.string.azimuth);
+        mPitch = getString(R.string.pitch);
+        mRoll = getString(R.string.roll);
+
+        startService();
     }
 
     @Override
@@ -63,6 +84,8 @@ public class MainActivity extends WearableActivity {
             Log.d(TAG, "mGoogleApiClient disconnect");
             mGoogleApiClient.disconnect();
         }
+
+        stopService();
 
         super.onDestroy();
     }
@@ -106,6 +129,98 @@ public class MainActivity extends WearableActivity {
                 break;
         }
         return super.dispatchTouchEvent(event);
+    }
+
+    /**
+     * サービスを起動する
+     */
+    private void startService() {
+        Log.d(TAG, "startService");
+        Intent intent = new Intent(this, SensorService.class);
+        startService(intent);
+        doBindService();
+    }
+
+    /**
+     * サービスを停止する
+     */
+    private void stopService() {
+        Log.d(TAG, "stopService");
+        doUnbindService();
+        stopService(new Intent(this, SensorService.class));
+    }
+
+    /**
+     * ServiceのBind処理
+     */
+    private void doBindService() {
+        // Serviceとの接続を確立
+        bindService(new Intent(MainActivity.this, SensorService.class), mConnection, BIND_AUTO_CREATE);
+    }
+
+    /**
+     * ServiceのUnbind処理
+     */
+    private void doUnbindService() {
+        if(mIsBound) {
+            // Serviceとの接続を解除
+            unbindService(mConnection);
+            mIsBound=false;
+        }
+    }
+
+    /**
+     * Serviceと接続するためのコネクション
+     */
+    private ServiceConnection mConnection = new ServiceConnection() {
+        /**
+         * Serviceと接続できた場合に呼ばれる
+         * @param name
+         * @param service
+         */
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            Log.d(TAG, "onServiceConnected");
+            // TextToSpeechServiceのインスタンスを取得する
+            mBoundService = ((SensorService.SensorServiceIBinder) service).getService();
+            mIsBound = true;
+
+            if(mBoundService!=null){
+                mBoundService.SetCallback(new SensorService.Callback() {
+                    @Override
+                    public void Update(float azimuth, float pitch, float roll) {
+                        setText(azimuth, pitch, roll);
+                        //SendMessage(PATH_ROLL, ROLL + "," + roll);
+                        //SendMessage(PATH_PITCH, PITCH + "," + pitch);
+                    }
+                });
+            }
+        }
+
+        /**
+         * Serviceとの接続が意図しないタイミングで切断された(異常系)場合に呼ばれる
+         * @param name
+         */
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            Log.d(TAG, "onServiceDisconnected");
+            mBoundService = null;
+            mIsBound = false;
+        }
+    };
+
+    /**
+     * テキスト設定
+     *
+     * @param azimuth
+     * @param pitch
+     * @param roll
+     */
+    private void setText(float azimuth, float pitch, float roll) {
+        String text = mAzimuth + " " + String.valueOf(azimuth)
+                + "\n" + mPitch + " " + String.valueOf(pitch)
+                + "\n" + mRoll + " " + String.valueOf(roll);
+        mTextView.setText(text);
     }
 
     /**

@@ -25,6 +25,8 @@ public class FlightCtrlService extends Service {
      * タッチ動作を示す値
      */
     public static final String ACTION_DOWN = "ACTION_DOWN";
+    public static final String ROLL = "ROLL";
+    public static final String PITCH = "PITCH";
 
     private static final String CALLBACK_NM = "onCallBack";
 
@@ -33,6 +35,8 @@ public class FlightCtrlService extends Service {
 
     private GoogleApiClient mGoogleApiClient;
     private static final String PATH_TOUCH = "/touch";
+    private static final String PATH_ROLL = "/roll";
+    private static final String PATH_PITCH = "/pitch";
 
     public FlightCtrlService() {
     }
@@ -122,12 +126,16 @@ public class FlightCtrlService extends Service {
             if (TextUtils.isEmpty(path)) {
                 return;
             }
+            //String message = new String(messageEvent.getData());
 
             // タッチイベント発生時
             if (path.equals(PATH_TOUCH)) {
                 // コールバックする
                 UnityPlayer.UnitySendMessage(mGameObjName, CALLBACK_NM, ACTION_DOWN);
-            }
+            } /*else if (path.equals(PATH_ROLL) || path.equals(PATH_PITCH)) {
+                // コールバックする
+                UnityPlayer.UnitySendMessage(mGameObjName, CALLBACK_NM, message);
+            }*/
         }
     };
 }
