@@ -21,6 +21,9 @@ import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.Wearable;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 public class MainActivity extends WearableActivity {
     private static final String TAG = "MainActivity";
 
@@ -79,6 +82,13 @@ public class MainActivity extends WearableActivity {
     @Override
     protected void onDestroy() {
         Log.d(TAG, "onDestroy");
+
+        if (mTimer != null) {
+            Log.d(TAG, "mTimer stop");
+            //タイマーの停止処理
+            mTimer.cancel();
+            mTimer = null;
+        }
 
         if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
             Log.d(TAG, "mGoogleApiClient disconnect");
@@ -162,12 +172,14 @@ public class MainActivity extends WearableActivity {
      * ServiceのUnbind処理
      */
     private void doUnbindService() {
-        if(mIsBound) {
+        if (mIsBound) {
             // Serviceとの接続を解除
             unbindService(mConnection);
-            mIsBound=false;
+            mIsBound = false;
         }
     }
+
+    private Timer mTimer = null;
 
     /**
      * Serviceと接続するためのコネクション
@@ -185,15 +197,67 @@ public class MainActivity extends WearableActivity {
             mBoundService = ((SensorService.SensorServiceIBinder) service).getService();
             mIsBound = true;
 
-            if(mBoundService!=null){
+            if (mBoundService != null) {
                 mBoundService.SetCallback(new SensorService.Callback() {
                     @Override
                     public void Update(float azimuth, float pitch, float roll) {
                         setText(azimuth, pitch, roll);
-                        //SendMessage(PATH_ROLL, ROLL + "," + roll);
-                        //SendMessage(PATH_PITCH, PITCH + "," + pitch);
+                        setPitch(pitch);
+                        setRoll(roll);
                     }
                 });
+
+                mTimer = new Timer(true);
+                mTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        SendMessage(PATH_ROLL, ROLL + "," + String.valueOf(getRoll()));
+                        SendMessage(PATH_PITCH, PITCH + "," + String.valueOf(getPitch()));
+                    }
+                }, 300, 300);
+            }
+        }
+
+        private float mPitch = 0f;
+        private float mRoll = 0f;
+
+        /**
+         * Pitchを取得する
+         * @return
+         */
+        private float getPitch() {
+            synchronized (this) {
+                return mPitch;
+            }
+        }
+
+        /**
+         * Pitchを設定する
+         * @param val
+         */
+        private void setPitch(float val) {
+            synchronized (this) {
+                mPitch = val;
+            }
+        }
+
+        /**
+         * Rollを取得する
+         * @return
+         */
+        private float getRoll() {
+            synchronized (this) {
+                return mRoll;
+            }
+        }
+
+        /**
+         * Rollを設定する
+         * @param val
+         */
+        private void setRoll(float val) {
+            synchronized (this) {
+                mRoll = val;
             }
         }
 

@@ -126,16 +126,16 @@ public class FlightCtrlService extends Service {
             if (TextUtils.isEmpty(path)) {
                 return;
             }
-            //String message = new String(messageEvent.getData());
+            String message = new String(messageEvent.getData());
 
             // タッチイベント発生時
             if (path.equals(PATH_TOUCH)) {
                 // コールバックする
                 UnityPlayer.UnitySendMessage(mGameObjName, CALLBACK_NM, ACTION_DOWN);
-            } /*else if (path.equals(PATH_ROLL) || path.equals(PATH_PITCH)) {
+            } else if (path.equals(PATH_ROLL) || path.equals(PATH_PITCH)) {
                 // コールバックする
                 UnityPlayer.UnitySendMessage(mGameObjName, CALLBACK_NM, message);
-            }*/
+            }
         }
     };
 }
